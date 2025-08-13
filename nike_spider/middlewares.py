@@ -17,11 +17,12 @@ class SeleniumMiddleware(object):
         if spider.name == 'products':
             try:
                 spider.browser.get(request.url)
-                spider.browser.execute_script('window.scrollTo(0, document.body.scrollHeight)')
+                if request.url == 'https://www.nike.com.cn/w/':
+                    spider.browser.execute_script('window.scrollTo(0, document.body.scrollHeight)')
             except TimeoutException as e:
                 print('超时')
                 spider.browser.execute_script('window.stop()')
-            time.sleep(2)
+            time.sleep(5)
             return HtmlResponse(url=spider.browser.current_url, body=spider.browser.page_source, encoding="utf-8", request=request)
 
 

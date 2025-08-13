@@ -15,8 +15,15 @@ class NikeSpider(scrapy.Spider):
         self.browser.set_page_load_timeout(300)
 
     def parse(self, response):
-        detail_page_links = response.css('div.product-card__body figure a.product-card__link-overlay')
-        yield from response.follow_all(detail_page_links, self.parse_detail)
+        detail_page_links = response.xpath('//div[@class="product-card__body"]/figure/a[@class="product-card__link-overlay"]/@href').getall()
+        url_count = 48 #48
+        _links = []
+        for each in detail_page_links:
+            sku = each.split('/')[-1]
+            if url_count > 0 and not sku[0].isdigit():
+                url_count = url_count - 1
+                _links.append(each)
+        yield from response.follow_all(_links, self.parse_detail)
 
     def parse_detail(self, response):
         def extract_with_xpath(query):
@@ -27,16 +34,14 @@ class NikeSpider(scrapy.Spider):
             size = [each.strip() for each in size]
         color = response.xpath('//li[@data-testid="product-description-color-description"]/text()').getall()
         color = color[2] if color else ''
-        sku = response.url.split('/')[-1]
-        if not sku[0].isdigit():
-            yield {
-                'title': extract_with_xpath('//div[@id="title-container"]/h1/text()'),
-                'subtitle': extract_with_xpath('//div[@id="title-container"]/h2/text()'),
-                'price': extract_with_xpath('//div[@id="price-container"]/span/text()'),
-                'color': color,
-                'size': size,
-                # 'sku': extract_with_xpath('//li[@data-testid="product-description-style-color"]/text()').getall()[2],
-                'sku': sku,
-                'details': extract_with_xpath('//div[@id="product-description-container"]/p/text()'),
-                'img_urls': extract_with_xpath('//div[@id="mobile-image-carousel"]/ul/li[1]/div/img/@src'),
-            }
+        yield {
+            'title': extract_with_xpath('//div[@id="title-container"]/h1/text()'),
+            'subtitle': extract_with_xpath('//div[@id="title-container"]/h2/text()'),
+            'price': extract_with_xpath('//div[@id="price-container"]/span/text()'),
+            'color': color,
+            'size': size,
+            # 'sku': extract_with_xpath('//li[@data-testid="product-description-style-color"]/text()').getall()[2],
+            'sku': response.url.split('/')[-1],
+            'details': extract_with_xpath('//div[@id="product-description-container"]/p/text()'),
+            'img_urls': extract_with_xpath('//div[@id="mobile-image-carousel"]/ul/li[1]/div/img/@src'),
+        }
